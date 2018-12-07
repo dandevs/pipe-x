@@ -1,3 +1,3 @@
 # PipeX
 
-Experimental toy for both that combines FRP and FP
+Experimental toy that both combines FRP and FP
