@@ -8,5 +8,3 @@ Experimental toy for both that combines FRP and FP
  * Make observables cold
  * Pipe.pipe direct link / terminate when appened pipes finishes
  * Make operators for use# PipeX
-
-Experimental toy that both combines FRP and FP
