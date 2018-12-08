@@ -5,7 +5,7 @@ describe("Operator", () => {
         const op = Operator.define((value, observer) =>
             observer.push(value));
 
-        expect(op(Operator.unwrap) instanceof Operator).toEqual(true);
+        expect(op() instanceof Operator).toEqual(true);
     });
 
     it("Can link multiple operators", () => {

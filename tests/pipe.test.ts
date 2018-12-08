@@ -1,23 +1,21 @@
 import { Pipe } from "../src/pipe";
-import { Operator } from "../src/operator";
+import { Operator, OperatorConstructor } from "../src/operator";
 import { finishStrategies } from "../src/finishStrategy";
 
+let add:      (count) => OperatorConstructor;
+let multiply: (count) => OperatorConstructor;
+let take:     (count) => OperatorConstructor;
+let delay:    OperatorConstructor;
+
 describe("Pipe", () => {
-    it("Works", (done) => {
-        jest.setTimeout(150);
+    beforeAll(() => {
+        add = (count) =>
+            Operator.define((value, observer) => observer.push(value + count));
 
-        const add5 = Operator.define((value, observer) =>
-            observer.push(value + 5));
+        multiply = (count) =>
+            Operator.define((value, observer) => observer.push(value * count));
 
-        const mul2 = Operator.define((value, observer) =>
-            observer.push(value * 2));
-
-        const ender = Operator.define((value, observer) => {
-            observer.push(value);
-            observer.finish();
-        });
-
-        const take = count => Operator.define((value, observer) => {
+        take = count => Operator.define((value, observer) => {
             if (observer.state.i++ < count)
                 observer.push(value);
 
@@ -26,30 +24,54 @@ describe("Pipe", () => {
 
         }, () => ({i: 0}));
 
-        const delay = Operator.define((value, observer) => {
+        delay = Operator.define((value, observer) => {
             setTimeout(() => observer.push(value), Math.random() * 50);
-        }, null, null, null, finishStrategies.counter);
+        }, finishStrategies.counter);
+    });
 
-        const pipe = Pipe(delay, take(3)); //?
-        const pipeInPipe = Pipe(pipe, add5);
+    it("Syncronhous returns", () => {
+        const pipe = Pipe(add(2), add(7), multiply(2));
+        expect(pipe(1) == 20).toBe(true);
+    });
 
-        add5().subscribe();
+    it("Pipe in pipe", () => {
+        const p0 = Pipe(add(1));
+        const p1 = Pipe(add(1), multiply(5));
+        const p2 = Pipe(add(1), p0, p1);
 
-        pipe.subscribe(value => {
-            console.log(value);
-        }, () => {
-            console.log("ended");
-            done();
+        // p2(0); //?
+        // expect(p2(5) == 100).toBe(true);
+    });
+
+    describe("Pipe.pipe", () => {
+        it("Soft links", () => {
+            const p0 = Pipe(add(5));
+            const p1 = p0.pipe(multiply(2));
+
+            expect(p0(5) === 10).toEqual(true);
+            expect(p1(5) === 20).toEqual(true);
         });
 
-        // pipeInPipe.subscribe(value => {
-        //     console.log(value);
-        // });
+        it("Hard links", () => {
+            const base = Pipe(add(5));
+            const soft = base.pipe(true, add(20), take(1));
+            const hard = base.pipe(true, multiply(5), take(2));
+            // base.pipe(add(0), take(1));
 
-        for (let i = 0; i < 10; i++)
-            pipe(Math.random() * 10);
-        // pipe(10); //?
-        // pipe(10); //?
-        // pipeInPipe(20); //?
+            base.subscribe(null, e => {
+                console.log(e);
+            });
+
+            soft.subscribe(null, () => {
+                console.log("done");
+            });
+
+            soft(5); //?
+            hard(5);
+            hard(5);
+            // hard(5); //?
+            // expect(soft(5) == 30).toEqual(true);
+            // expect(hard(5) === 50).toEqual(true);
+        });
     });
 });
