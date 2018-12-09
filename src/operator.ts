@@ -1,24 +1,27 @@
 import { removeFromArray, noop } from "./utils";
 import { Subscribable } from "./subscribable";
 
-export class Operator<T = any, S = {}> extends Subscribable<T> {
+export class Operator<T = any, S = any> extends Subscribable<T> {
     links = { back: <Operator>null, front: <Operator[]>[] };
     alive = true;
     observer: Observer<T, S>;
+    syncValue: T;
+    lock: boolean;
 
-    static asJunction = Symbol();
-    static asNormal   = Symbol();
-    static none       = Symbol();
+    static none = Symbol("none");
 
     static define<T = any, S = any>(operation?: Operation<T, S>, setupFn?: OperatorSetupFn<T, S>, finishStrategy?) {
-        const opConstructor = (value?: T | Symbol) => {
-            // TODO: Otherwise calculate the value of the operator
+        let opCache: Operator<T>;
+
+        const opPackage = (value?: T) => {
+            if (!opCache) opCache = opPackage.asJunction();
+            return opCache.push(value);
         };
 
-        opConstructor.asNormal = () => new Operator(operation, setupFn, finishStrategy);
-        opConstructor.asJunction = () => new Operator(operation, setupFn, finishStrategy);
+        opPackage.asNormal   = () => new Operator(operation, setupFn, finishStrategy);
+        opPackage.asJunction = () => new OperatorJunction(operation, setupFn, finishStrategy);
 
-        return opConstructor;
+        return opPackage;
     }
 
     constructor(
@@ -33,11 +36,14 @@ export class Operator<T = any, S = {}> extends Subscribable<T> {
 
     push(value?: T) {
         if (!this.alive) return;
+        // @ts-ignore
+        this.syncValue = Operator.none;
         this.operation(value, this.observer);
+        return this.syncValue;
     }
 
     pushToFront(value?: T) {
-        this.links.front.forEach(op => op.push(value));
+        this.links.front.forEach(op => this.syncValue = op.push(value));
     }
 
     // -------------------------------------------------------------------
@@ -49,7 +55,7 @@ export class Operator<T = any, S = {}> extends Subscribable<T> {
         this.alive = false;
     }
 
-    finishUp() {
+    finishUp() { // TODO: Add finish up strategy
         this.links.front.forEach(op => op.finishUp());
         this.finishImmediate();
     }
@@ -58,6 +64,7 @@ export class Operator<T = any, S = {}> extends Subscribable<T> {
 
     createObserver() { return {
         push: (value?: T) => {
+            this.syncValue = value;
             this.pushToFront(value);
         },
 
@@ -69,12 +76,12 @@ export class Operator<T = any, S = {}> extends Subscribable<T> {
 
 // --------------------------------------------------------------------
 
-export class OperatorJunction<T, S> extends Operator<T, S> {
+export class OperatorJunction<T, S = any> extends Operator<T, S> {
     isHardLinked = false;
 
     pushToFront(value?: T) {
         this.notifyOnValue(value);
-        super.pushToFront(value);
+        this.links.front.forEach(op => op.push(value));
     }
 
     finishImmediate(fromOperator?: Operator) {
@@ -94,13 +101,20 @@ export class OperatorJunction<T, S> extends Operator<T, S> {
 
 // ------------------------------------------------------------
 
+export class OperatorPipe<T = any, S = any> extends Operator<T, S> {
+
+}
+
+// ------------------------------------------------------------
+
 export function linkOperators(target: Operator, back?: Operator, front?: Operator) {
-    target.links.back = back;
+    if (back) target.links.back = back;
     if (front) target.links.front.push(front);
 }
 
 // ------------------------------------------------------------
 
-export type Observer<T, S = {}> = ReturnType<Operator<T, S>["createObserver"]>;
-export type Operation<T, S = {}> = (value: T, observer: Observer<T, S>) => any;
-export type OperatorSetupFn<T, S = {}> = (operator: Operator<T, S>, observer: Observer<T, S>) => S;
+export type Observer<T, S = any> = ReturnType<Operator<T, S>["createObserver"]>;
+export type Operation<T, S = any> = (value: T, observer: Observer<T, S>) => any;
+export type OperatorSetupFn<T, S = any> = (operator: Operator<T, S>, observer: Observer<T, S>) => S;
+export type OperatorPackage = ReturnType<typeof Operator["define"]>;

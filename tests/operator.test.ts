@@ -40,7 +40,11 @@ describe("Operators", () => {
 
             if (observer.state.i == repeat -1)
                 observer.finish();
-        }, () => ({ i: 0 }));
+        }, (op, observer) => {
+            expect(op).toBeTruthy();
+            expect(observer).toBeTruthy();
+            return { i: 0 };
+        });
 
         take.subscribe(value => {
             expect(++occurences < repeat).toEqual(true);
