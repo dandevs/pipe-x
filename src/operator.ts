@@ -6,6 +6,21 @@ export class Operator<T = any, S = {}> extends Subscribable<T> {
     alive = true;
     observer: Observer<T, S>;
 
+    static asJunction = Symbol();
+    static asNormal   = Symbol();
+    static none       = Symbol();
+
+    static define<T = any, S = any>(operation?: Operation<T, S>, setupFn?: OperatorSetupFn<T, S>, finishStrategy?) {
+        const opConstructor = (value?: T | Symbol) => {
+            // TODO: Otherwise calculate the value of the operator
+        };
+
+        opConstructor.asNormal = () => new Operator(operation, setupFn, finishStrategy);
+        opConstructor.asJunction = () => new Operator(operation, setupFn, finishStrategy);
+
+        return opConstructor;
+    }
+
     constructor(
         public operation?: Operation<T, S>,
         setupFn?: OperatorSetupFn<T, S>,
@@ -57,10 +72,6 @@ export class Operator<T = any, S = {}> extends Subscribable<T> {
 export class OperatorJunction<T, S> extends Operator<T, S> {
     isHardLinked = false;
 
-    push(value?: T) {
-        super.push(value);
-    }
-
     pushToFront(value?: T) {
         this.notifyOnValue(value);
         super.pushToFront(value);
@@ -85,9 +96,7 @@ export class OperatorJunction<T, S> extends Operator<T, S> {
 
 export function linkOperators(target: Operator, back?: Operator, front?: Operator) {
     target.links.back = back;
-
-    if (front)
-        target.links.front.push(front);
+    if (front) target.links.front.push(front);
 }
 
 // ------------------------------------------------------------
@@ -95,9 +104,3 @@ export function linkOperators(target: Operator, back?: Operator, front?: Operato
 export type Observer<T, S = {}> = ReturnType<Operator<T, S>["createObserver"]>;
 export type Operation<T, S = {}> = (value: T, observer: Observer<T, S>) => any;
 export type OperatorSetupFn<T, S = {}> = (operator: Operator<T, S>, observer: Observer<T, S>) => S;
-
-type Op = OperatorSetupFn<number, { yummy: boolean }>;
-
-const Op = new Operator<number>((value, observer) => {
-    observer.push(321);
-});
