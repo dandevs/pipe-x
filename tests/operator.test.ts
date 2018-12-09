@@ -30,9 +30,25 @@ describe("Operators", () => {
         identity.push(5);
     });
 
-    it("Can be stateful", () => {
-        const take = new Operator((value, observer) => {
-            observer.push(1);
+    it("Can be stateful", (done) => {
+        const repeat = 5;
+        let occurences = 0;
+
+        const take = new OperatorJunction((value, observer) => {
+            if (observer.state.i++ < repeat - 1)
+                observer.push(value);
+
+            if (observer.state.i == repeat -1)
+                observer.finish();
         }, () => ({ i: 0 }));
+
+        take.subscribe(value => {
+            expect(++occurences < repeat).toEqual(true);
+        }, () => {
+            done();
+        });
+
+        for (let i = 0; i < repeat + 3; i++)
+            take.push(i);
     });
 });
