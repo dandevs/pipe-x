@@ -1,5 +1,4 @@
 import { OperatorPackage, Operator, OperatorJunction, linkOperators } from "./operator";
-import { removeFromArray } from "./utils";
 
 export function Pipe<T = any>(...operatorPackages: (OperatorPackage | PipeType)[]) {
     const operators = unpackOpPackages(...operatorPackages);
@@ -9,6 +8,8 @@ export function Pipe<T = any>(...operatorPackages: (OperatorPackage | PipeType)[
         const front = i < operators.length - 1 ? operators[i + 1] : null;
         linkOperators(op, back, front);
     });
+
+    // (<OperatorJunction>operators[operators.length - 1]).registerInPipe();
 
     const pipe: PipeType<T> = (value?) => {
         // @ts-ignore
@@ -32,6 +33,7 @@ export function Pipe<T = any>(...operatorPackages: (OperatorPackage | PipeType)[
 
         const childPipe = Pipe(...childOpPackages as OperatorPackage[]);
         linkOperators(pipe.lastOp, null, childPipe.firstOp);
+        // linkOperators(childPipe.firstOp, pipe.lastOp);
         childPipe.rootOp = pipe.rootOp;
         return childPipe;
     };
@@ -63,6 +65,7 @@ function unpackOpPackages(...operatorPackages: (OperatorPackage | PipeType)[]) {
         }
     }
 
+    // (<OperatorJunction>operators[operators.length - 1]).pipeStartOperator = operators[0];
     return operators;
 }
 

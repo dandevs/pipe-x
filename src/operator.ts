@@ -76,8 +76,13 @@ export class Operator<T = any, S = any> extends Subscribable<T> {
 
 // --------------------------------------------------------------------
 
-export class OperatorJunction<T, S = any> extends Operator<T, S> {
+export class OperatorJunction<T = any, S = any> extends Operator<T, S> {
     isHardLinked = false;
+    pipeStartOperator: Operator;
+
+    registerInPipe() {
+        // console.log(this.pipeStartOperator.links);
+    }
 
     pushToFront(value?: T) {
         this.notifyOnValue(value);
@@ -86,7 +91,6 @@ export class OperatorJunction<T, S = any> extends Operator<T, S> {
 
     finishImmediate(fromOperator?: Operator) {
         if (!this.isHardLinked) {
-            super.finishImmediate();
             return this.notifyOnFinishOrError(true);
         }
 

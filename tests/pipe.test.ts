@@ -36,13 +36,14 @@ it("Pipes in pipe", () => {
 });
 
 it("Branching pipe / hardlink", () => {
-    const p0 = Pipe(add(1));
-    const p1 = p0.pipe(add(2), take(2));
-    const p3 = p1.pipe(add(2), take(3));
+    const p0 = Pipe(add(1), add(2), add(3));
+    const p1 = p0.pipe(add(4));
+    // const p2 = p1.pipe(add(2), take(3));
+    // const p3 = p2.pipe(add(60));
 
-    p0.subscribe(e => {
-        console.log(e);
-    });
+    // p0.subscribe(e => {
+    //     console.log(e);
+    // });
 
-    p3(1);
+    // p2(1);
 });
